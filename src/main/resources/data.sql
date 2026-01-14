@@ -10,3 +10,10 @@ INSERT INTO ingredient (name, price, category, id_dish) VALUES
 ('Poulet', 4500.00, 'ANIMAL', 2),
 ('Chocolat', 3000.00, 'OTHER', 4),
 ('Beurre', 2500.00, 'DAIRY', 4);
+ALTER TABLE dish ADD COLUMN IF NOT EXISTS price DOUBLE;
+
+UPDATE dish SET price = CASE name
+    WHEN 'Salade fraîche' THEN 2000.0
+    WHEN 'Poulet grillé' THEN 6000.0
+    ELSE NULL
+END;
