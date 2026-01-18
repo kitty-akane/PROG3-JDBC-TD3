@@ -1,0 +1,8 @@
+jdbc/td2/Main.class
+jdbc/td2/model/DishTypeEnum.class
+jdbc/td2/model/Dish.class
+jdbc/td2/dao/DBConnection.class
+jdbc/td2/model/Ingredient.class
+jdbc/td2/model/CategoryEnum.class
+jdbc/td2/dao/DataRetriever.class
+jdbc/td2/ConnectionTest.class

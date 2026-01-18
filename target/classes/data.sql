@@ -1,19 +1,24 @@
-INSERT INTO dish (name, dish_type) VALUES
-('Salade fraîche', 'START'),
-('Poulet grillé', 'MAIN'),
-('Riz aux légumes', 'MAIN'),
-('Gâteau au chocolat', 'DESSERT'),
-('Salade de fruits', 'DESSERT');
-INSERT INTO ingredient (name, price, category, id_dish) VALUES
-('Laitue', 800.00, 'VEGETABLE', 1),
-('Tomate', 600.00, 'VEGETABLE', 1),
-('Poulet', 4500.00, 'ANIMAL', 2),
-('Chocolat', 3000.00, 'OTHER', 4),
-('Beurre', 2500.00, 'DAIRY', 4);
-ALTER TABLE dish ADD COLUMN IF NOT EXISTS price DOUBLE;
+insert into dish (id, name, dish_type)
+values (1, 'Salaide fraîche', 'STARTER'),
+       (2, 'Poulet grillé', 'MAIN'),
+       (3, 'Riz aux légumes', 'MAIN'),
+       (4, 'Gâteau au chocolat ', 'DESSERT'),
+       (5, 'Salade de fruits', 'DESSERT');
 
-UPDATE dish SET price = CASE name
-    WHEN 'Salade fraîche' THEN 2000.0
-    WHEN 'Poulet grillé' THEN 6000.0
-    ELSE NULL
-END;
+
+insert into ingredient (id, name, category, price, id_dish)
+values (1, 'Laitue', 'VEGETABLE', 800.0, 1),
+       (2, 'Tomate', 'VEGETABLE', 600.0, 1),
+       (3, 'Poulet', 'ANIMAL', 4500.0, 2),
+       (4, 'Chocolat ', 'OTHER', 3000.0, 4),
+       (5, 'Beurre', 'DAIRY', 2500.0, 4);
+
+
+
+update dish
+set price = 2000.0
+where id = 1;
+
+update dish
+set price = 6000.0
+where id = 2;
