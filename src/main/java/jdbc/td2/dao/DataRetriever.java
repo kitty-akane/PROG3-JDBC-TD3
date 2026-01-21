@@ -1,37 +1,47 @@
 package jdbc.td2.dao;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import jdbc.td2.model.*;
+import jdbc.td2.model.CategoryEnum;
+import jdbc.td2.model.Dish;
+import jdbc.td2.model.DishIngredient;
+import jdbc.td2.model.DishTypeEnum;
+import jdbc.td2.model.Ingredient;
 
 public class DataRetriever {
+
     public Dish findDishById(Integer id) {
-        DBConnection dbConnection = new DBConnection();
-        try {
-            Connection connection = DBConnection.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(
-                    """
-                            select dish.id as dish_id, dish.name as dish_name, dish_type, dish.price as dish_price
-                            from dish
-                            where dish.id = ?;
-                            """);
-            preparedStatement.setInt(1, id);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                Dish dish = new Dish();
-                dish.setId(resultSet.getInt("dish_id"));
-                dish.setName(resultSet.getString("dish_name"));
-                dish.setDishType(DishTypeEnum.valueOf(resultSet.getString("dish_type")));
-                dish.setPrice(resultSet.getObject("dish_price") == null
-                        ? null : resultSet.getDouble("dish_price"));
-                dish.setIngredients(findIngredientByDishId(id));
-                return dish;
+        try (Connection con = DBConnection.getConnection()) {
+
+            PreparedStatement dishStmt = con.prepareStatement("""
+                SELECT id, name, dish_type, price
+                FROM dish
+                WHERE id = ?
+            """);
+            dishStmt.setInt(1, id);
+
+            ResultSet rs = dishStmt.executeQuery();
+            if (!rs.next()) {
+                throw new RuntimeException("Dish not found " + id);
             }
-            dbConnection.closeConnection(connection);
-            throw new RuntimeException("Dish not found " + id);
+
+            Dish dish = new Dish();
+            dish.setId(rs.getInt("id"));
+            dish.setName(rs.getString("name"));
+            dish.setDishType(DishTypeEnum.valueOf(rs.getString("dish_type")));
+            dish.setPrice(rs.getObject("price") == null ? null : rs.getDouble("price"));
+
+            dish.setIngredients(findDishIngredientsByDishId(id, con));
+
+            return dish;
+
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -47,7 +57,6 @@ public class DataRetriever {
                     RETURNING id
                 """;
 
-        
         try (Connection conn = DBConnection.getConnection()) {
             conn.setAutoCommit(false);
             Integer dishId;
@@ -70,7 +79,7 @@ public class DataRetriever {
                 }
             }
 
-            List<Ingredient> newIngredients = toSave.getIngredients();
+            List<DishIngredient> newIngredients = toSave.getIngredients();
             detachIngredients(conn, dishId, newIngredients);
             attachIngredients(conn, dishId, newIngredients);
 
@@ -104,8 +113,8 @@ public class DataRetriever {
                     ps.setString(3, ingredient.getCategory().name());
                     ps.setDouble(4, ingredient.getPrice());
                     if (ingredient.getQuantity() != null) {
-                        ps.setDouble(5, ingredient.getQuantity());
-                    }else {
+                        ps.setDouble(5, (double) ingredient.getQuantity());
+                    } else {
                         ps.setNull(5, Types.DOUBLE);
                     }
 
@@ -127,10 +136,9 @@ public class DataRetriever {
         }
     }
 
-
-    private void detachIngredients(Connection conn, Integer dishId, List<Ingredient> ingredients)
+    private void detachIngredients(Connection conn, Integer dishId, List<DishIngredient> newIngredients)
             throws SQLException {
-        if (ingredients == null || ingredients.isEmpty()) {
+        if (newIngredients == null || newIngredients.isEmpty()) {
             try (PreparedStatement ps = conn.prepareStatement(
                     "UPDATE ingredient SET id_dish = NULL WHERE id_dish = ?")) {
                 ps.setInt(1, dishId);
@@ -145,7 +153,7 @@ public class DataRetriever {
                     WHERE id_dish = ? AND id NOT IN (%s)
                 """;
 
-        String inClause = ingredients.stream()
+        String inClause = newIngredients.stream()
                 .map(i -> "?")
                 .collect(Collectors.joining(","));
 
@@ -154,17 +162,17 @@ public class DataRetriever {
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, dishId);
             int index = 2;
-            for (Ingredient ingredient : ingredients) {
+            for (DishIngredient ingredient : newIngredients) {
                 ps.setInt(index++, ingredient.getId());
             }
             ps.executeUpdate();
         }
     }
 
-    private void attachIngredients(Connection conn, Integer dishId, List<Ingredient> ingredients)
+    private void attachIngredients(Connection conn, Integer dishId, List<DishIngredient> newIngredients)
             throws SQLException {
 
-        if (ingredients == null || ingredients.isEmpty()) {
+        if (newIngredients == null || newIngredients.isEmpty()) {
             return;
         }
 
@@ -175,7 +183,7 @@ public class DataRetriever {
                 """;
 
         try (PreparedStatement ps = conn.prepareStatement(attachSql)) {
-            for (Ingredient ingredient : ingredients) {
+            for (DishIngredient ingredient : newIngredients) {
                 ps.setInt(1, dishId);
                 ps.setInt(2, ingredient.getId());
                 ps.addBatch(); // Can be substitute ps.executeUpdate() but bad performance
@@ -212,7 +220,6 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     }
-
 
     private String getSerialSequenceName(Connection conn, String tableName, String columnName)
             throws SQLException {
