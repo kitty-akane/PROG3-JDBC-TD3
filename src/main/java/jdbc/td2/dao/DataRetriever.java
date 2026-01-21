@@ -47,6 +47,32 @@ public class DataRetriever {
         }
     }
 
+    private List<DishIngredient> findDishIngredientsByDishId(Integer dishId, Connection con) throws SQLException {
+        List<DishIngredient> ingredients = new ArrayList<>();
+
+        PreparedStatement ingredientStmt = con.prepareStatement("""
+                SELECT id, name, category, price, required_quantity
+                FROM ingredient
+                WHERE id_dish = ?
+            """);
+        ingredientStmt.setInt(1, dishId);
+
+        ResultSet rs = ingredientStmt.executeQuery();
+        while (rs.next()) {
+            DishIngredient ingredient = new DishIngredient();
+            ingredient.setId(rs.getInt("id"));
+            ingredient.setName(rs.getString("name"));
+            ingredient.setCategory(CategoryEnum.valueOf(rs.getString("category")));
+            ingredient.setPrice(rs.getDouble("price"));
+            Object requiredQuantity = rs.getObject("required_quantity");
+            ingredient.setQuantity(requiredQuantity == null ? null : rs.getDouble("required_quantity"));
+
+            ingredients.add(ingredient);
+        }
+
+        return ingredients;
+    }
+
     public Dish saveDish(Dish toSave) {
         String upsertDishSql = """
                     INSERT INTO dish (id, price, name, dish_type)
