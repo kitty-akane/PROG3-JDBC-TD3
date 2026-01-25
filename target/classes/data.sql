@@ -5,15 +5,18 @@ values (1, 'Salaide fraîche', 'STARTER'),
        (4, 'Gâteau au chocolat ', 'DESSERT'),
        (5, 'Salade de fruits', 'DESSERT');
 
+insert into ingredient (id, name, category, price)
+values (1, 'Laitue', 'VEGETABLE', 800.0),
+       (2, 'Tomate', 'VEGETABLE', 600.0),
+       (3, 'Poulet', 'ANIMAL', 4500.0),
+       (4, 'Chocolat ', 'OTHER', 3000.0),
+       (5, 'Beurre', 'DAIRY', 2500.0);
 
-insert into ingredient (id, name, category, price, id_dish)
-values (1, 'Laitue', 'VEGETABLE', 800.0, 1),
-       (2, 'Tomate', 'VEGETABLE', 600.0, 1),
-       (3, 'Poulet', 'ANIMAL', 4500.0, 2),
-       (4, 'Chocolat ', 'OTHER', 3000.0, 4),
-       (5, 'Beurre', 'DAIRY', 2500.0, 4);
-
-
+insert into dish_ingredient (dish_id, ingredient_id, required_quantity)
+values (1, 2, 100.0),
+       (2, 3, 250.0),
+       (4, 4, 200.0),
+       (4, 5, 100.0);
 
 update dish
 set price = 2000.0

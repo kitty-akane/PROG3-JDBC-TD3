@@ -1,5 +1,7 @@
 /home/user/Documents/PROG3/demo/src/main/java/jdbc/td2/Main.java
 /home/user/Documents/PROG3/demo/src/main/java/jdbc/td2/dao/DBConnection.java
+/home/user/Documents/PROG3/demo/src/main/java/jdbc/td2/model/DishIngredient.java
+/home/user/Documents/PROG3/demo/src/main/java/jdbc/td2/model/UnitEnum.java
 /home/user/Documents/PROG3/demo/src/main/java/jdbc/td2/model/CategoryEnum.java
 /home/user/Documents/PROG3/demo/src/main/java/jdbc/td2/dao/DataRetriever.java
 /home/user/Documents/PROG3/demo/src/main/java/jdbc/td2/model/Dish.java
