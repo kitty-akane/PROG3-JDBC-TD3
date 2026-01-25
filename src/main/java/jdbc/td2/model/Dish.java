@@ -3,44 +3,22 @@ package jdbc.td2.model;
 import java.util.List;
 import java.util.Objects;
 
-
 public class Dish {
+
     private Integer id;
-    private Double price;
     private String name;
     private DishTypeEnum dishType;
-    private List<Ingredient> ingredients;
-
-    public Double getPrice() {
-        return price;
-    }
-
-    public void setPrice(Double price) {
-        this.price = price;
-    }
-
-    public Double getDishCost() {
-        double totalPrice = 0;
-        for (int i = 0; i < ingredients.size(); i++) {
-            Double quantity = ingredients.get(i).getQuantity();
-            if(quantity == null) {
-                throw new RuntimeException("...");
-            }
-            totalPrice = totalPrice + ingredients.get(i).getPrice() * quantity;
-        }
-        return totalPrice;
-    }
+    private Double sellingPrice;
+    private List<DishIngredient> dishIngredients;
 
     public Dish() {
     }
 
-    public Dish(Integer id, String name, DishTypeEnum dishType, List<Ingredient> ingredients) {
+    public Dish(Integer id, String name, DishTypeEnum dishType) {
         this.id = id;
         this.name = name;
         this.dishType = dishType;
-        this.ingredients = ingredients;
     }
-
 
     public Integer getId() {
         return id;
@@ -66,48 +44,62 @@ public class Dish {
         this.dishType = dishType;
     }
 
-    public List<Ingredient> getIngredients() {
-        return ingredients;
+    public Double getPrice() {
+        return sellingPrice;
     }
 
-    public void setIngredients(List<Ingredient> ingredients) {
-        if (ingredients == null) {
-            this.ingredients = null;
-            return;
+    public void setPrice(Double sellingPrice) {
+        this.sellingPrice = sellingPrice;
+    }
+
+    public List<DishIngredient> getIngredients() {
+        return dishIngredients;
+    }
+
+    public void setIngredients(List<DishIngredient> dishIngredients) {
+        this.dishIngredients = dishIngredients;
+    }
+
+    public Double getDishCost() {
+        double total = 0;
+        for (DishIngredient di : dishIngredients) {
+            total += di.getIngredient().getPrice() * di.getQuantity();
         }
-        for (int i = 0; i < ingredients.size(); i++) {
-            ingredients.get(i).setDish(this);
+        return total;
+    }
+
+    public Double getGrossMargin() {
+        if (sellingPrice == null) {
+            return null;
         }
-        this.ingredients = ingredients;
+        return sellingPrice - getDishCost();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         Dish dish = (Dish) o;
-        return Objects.equals(id, dish.id) && Objects.equals(name, dish.name) && dishType == dish.dishType && Objects.equals(ingredients, dish.ingredients);
+        return Objects.equals(id, dish.id) && Objects.equals(name, dish.name) && dishType == dish.dishType && Objects.equals(sellingPrice, dish.sellingPrice) && Objects.equals(dishIngredients, dish.dishIngredients);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, dishType, ingredients);
+        return Objects.hash(id, name, dishType, sellingPrice, dishIngredients);
     }
 
     @Override
     public String toString() {
-        return "Dish{" +
-                "id=" + id +
-                ", price=" + price +
-                ", name='" + name + '\'' +
-                ", dishType=" + dishType +
-                ", ingredients=" + ingredients +
-                '}';
-    }
-
-    public Double getGrossMargin() {
-        if (price == null) {
-            throw new RuntimeException("Price is null");
-        }
-        return price - getDishCost();
+        return "Dish{"
+                + "id=" + id
+                + ", name='" + name + '\''
+                + ", dishType=" + dishType
+                + ", sellingPrice=" + sellingPrice
+                + ", dishIngredients=" + dishIngredients
+                + '}';
     }
 }

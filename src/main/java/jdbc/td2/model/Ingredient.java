@@ -1,22 +1,28 @@
 package jdbc.td2.model;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 public class Ingredient {
+
     private Integer id;
     private String name;
     private CategoryEnum category;
     private Double price;
-    private Dish dish;
-    private Double quantity;
+    private List<StockMovement> stockMovementList;
 
-    public Double getQuantity() {
-        return quantity;
+    public Double getStockValueAt(Instant t) {
+    if (stockMovementList == null) {
+        return 0.0;
     }
 
-    public void setQuantity(Double quantity) {
-        this.quantity = quantity;
-    }
+    return stockMovementList.stream()
+            .filter(m -> !m.getMovementDate().isAfter(t))
+            .mapToDouble(StockMovement::getSignedQuantity)
+            .sum();
+}
+
 
     public Ingredient() {
     }
@@ -30,10 +36,6 @@ public class Ingredient {
         this.name = name;
         this.category = category;
         this.price = price;
-    }
-
-    public String getDishName() {
-        return dish == null ? null : dish.getName();
     }
 
     public Integer getId() {
@@ -68,35 +70,35 @@ public class Ingredient {
         this.price = price;
     }
 
-    public Dish getDish() {
-        return dish;
+    public List<StockMovement> getStockMovementList() {
+        return stockMovementList;
     }
 
-    public void setDish(Dish dish) {
-        this.dish = dish;
+    public void setStockMovementList(List<StockMovement> stockMovementList) {
+        this.stockMovementList = stockMovementList;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         Ingredient that = (Ingredient) o;
-        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && category == that.category && Objects.equals(price, that.price) && Objects.equals(dish, that.dish);
+        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && category == that.category && Objects.equals(price, that.price);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, category, price, dish);
+        return Objects.hash(id, name, category, price);
     }
 
     @Override
     public String toString() {
-        return "Ingredient{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", category=" + category +
-                ", price=" + price +
-                ", dishName=" + getDishName() +
-                ", quantity=" + quantity +
-                '}';
+        return "Ingredient{"
+                + "id=" + id
+                + ", name='" + name + '\''
+                + ", category=" + category
+                + ", price=" + price
+                + '}';
     }
 }
