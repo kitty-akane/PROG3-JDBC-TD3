@@ -13,7 +13,7 @@ public class DBConnection {
         final String PASSWORD = "mini_dish_pass";
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
-      public void closeConnection(Connection connection) {
+      public static void closeConnection(Connection connection) {
         if (connection != null) {
             try {
                 connection.close();
