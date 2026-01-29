@@ -501,6 +501,40 @@ public class DataRetriever {
     // =========================
     public Order saveOrder(Order order) {
         try (Connection con = DBConnection.getConnection()) {
+        // =========================
+// TABLE AVAILABILITY CHECK
+// =========================
+if (order.getTableOrder() == null ||
+    order.getTableOrder().getTable() == null) {
+    throw new RuntimeException("Aucune table fournie");
+}
+
+TableOrder toSave = order.getTableOrder();
+Table requestedTable = findTableById(toSave.getTable().getId());
+
+Instant arrival = toSave.getArrivalDatetime();
+Instant departure = toSave.getDepartureDatetime();
+
+if (!requestedTable.isAvailable(arrival, departure)) {
+
+    List<Table> allTables = findAllTables();
+    List<Integer> freeTables = new ArrayList<>();
+
+    for (Table t : allTables) {
+        if (t.isAvailable(arrival, departure)) {
+            freeTables.add(t.getNumber());
+        }
+    }
+
+    if (freeTables.isEmpty()) {
+        throw new RuntimeException("Aucune table n'est disponible actuellement");
+    }
+
+    throw new RuntimeException(
+        "La table demandée n'est pas disponible. Tables libres: " + freeTables
+    );
+}
+
             con.setAutoCommit(false);
 
             checkStock(order);
@@ -554,6 +588,17 @@ public class DataRetriever {
                     sm.executeUpdate();
                 }
             }
+PreparedStatement tableStmt = con.prepareStatement("""
+    INSERT INTO table_order
+    (id_table, id_order, arrival_datetime, departure_datetime)
+    VALUES (?, ?, ?, ?)
+""");
+
+tableStmt.setInt(1, requestedTable.getId());
+tableStmt.setInt(2, orderId);
+tableStmt.setTimestamp(3, Timestamp.from(arrival));
+tableStmt.setTimestamp(4, Timestamp.from(departure));
+tableStmt.executeUpdate();
 
             con.commit();
 
@@ -612,4 +657,82 @@ public class DataRetriever {
             throw new RuntimeException(e);
         }
     }
+    // FIND TABLE BY ID 
+    public Table findTableById(Integer id) {
+    try (Connection con = DBConnection.getConnection()) {
+        PreparedStatement ps = con.prepareStatement("""
+            SELECT id, number FROM restaurant_table WHERE id = ?
+        """);
+        ps.setInt(1, id);
+        ResultSet rs = ps.executeQuery();
+
+        if (!rs.next()) {
+            throw new RuntimeException("Table not found: " + id);
+        }
+
+        Table table = new Table();
+        table.setId(rs.getInt("id"));
+        table.setNumber(rs.getInt("number"));
+
+        PreparedStatement ops = con.prepareStatement("""
+            SELECT arrival_datetime, departure_datetime
+            FROM table_order
+            WHERE id_table = ?
+        """);
+        ops.setInt(1, id);
+
+        ResultSet ors = ops.executeQuery();
+        while (ors.next()) {
+            TableOrder to = new TableOrder();
+            to.setArrivalDatetime(ors.getTimestamp("arrival_datetime").toInstant());
+            to.setDepartureDatetime(ors.getTimestamp("departure_datetime").toInstant());
+            table.getOrders().add(to);
+        }
+
+        return table;
+    } catch (SQLException e) {
+        throw new RuntimeException(e);
+    }
+}
+// FIND ALL TABLES
+public List<Table> findAllTables() {
+    List<Table> tables = new ArrayList<>();
+
+    try (Connection con = DBConnection.getConnection()) {
+        ResultSet rs = con.prepareStatement("""
+            SELECT id, number FROM restaurant_table
+        """).executeQuery();
+
+        while (rs.next()) {
+            Table t = new Table();
+            t.setId(rs.getInt("id"));
+            t.setNumber(rs.getInt("number"));
+            t.setOrders(new ArrayList<>());
+            tables.add(t);
+        }
+
+        for (Table t : tables) {
+            PreparedStatement ps = con.prepareStatement("""
+                SELECT arrival_datetime, departure_datetime
+                FROM table_order
+                WHERE id_table = ?
+            """);
+            ps.setInt(1, t.getId());
+            ResultSet trs = ps.executeQuery();
+
+            while (trs.next()) {
+                TableOrder to = new TableOrder();
+                to.setArrivalDatetime(trs.getTimestamp("arrival_datetime").toInstant());
+                to.setDepartureDatetime(trs.getTimestamp("departure_datetime").toInstant());
+                t.getOrders().add(to);
+            }
+        }
+
+        return tables;
+    } catch (SQLException e) {
+        throw new RuntimeException(e);
+    }
+}
+
+
 }

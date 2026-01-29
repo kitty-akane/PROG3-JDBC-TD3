@@ -9,6 +9,7 @@ public class Order {
     private String reference;
     private Instant creationDatetime;
     private List<DishOrder> dishOrders;
+    private TableOrder tableOrder;
 
     public Double getTotalAmountWithoutVAT() {
         return dishOrders.stream()
@@ -54,5 +55,11 @@ public class Order {
 
     public void setDishOrders(List<DishOrder> dishOrders) {
         this.dishOrders = dishOrders;
+    }
+    public TableOrder getTableOrder() {
+        return tableOrder;
+    }
+    public void setTableOrder(TableOrder tableOrder) {
+        this.tableOrder = tableOrder;
     }
 }
