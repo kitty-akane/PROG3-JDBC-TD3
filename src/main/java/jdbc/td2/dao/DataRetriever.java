@@ -538,8 +538,6 @@ if (!requestedTable.isAvailable(arrival, departure)) {
             con.setAutoCommit(false);
 
             checkStock(order);
-
-            // Generate reference
             PreparedStatement refStmt = con.prepareStatement("""
                 SELECT COALESCE(MAX(id), 0) + 1 FROM "Order"
             """);
@@ -548,7 +546,7 @@ if (!requestedTable.isAvailable(arrival, departure)) {
             int nextId = rs.getInt(1);
             String ref = String.format("ORD%05d", nextId);
 
-            // Insert Order
+            
             PreparedStatement orderStmt = con.prepareStatement("""
                 INSERT INTO "Order"(reference, creation_datetime)
                 VALUES (?, ?)
