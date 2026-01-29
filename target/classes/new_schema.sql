@@ -32,3 +32,17 @@ INSERT INTO Dish (id, name, dish_type, selling_price) VALUES
 (3, 'Riz aux légumes', 'MAIN', NULL),
 (4, 'Gâteau au chocolat', 'DESSERT', 8000.00),
 (5, 'Salade de fruits', 'DESSERT', NULL);
+
+CREATE TABLE "Order" (
+    id SERIAL PRIMARY KEY,
+    reference VARCHAR NOT NULL UNIQUE,
+    creation_datetime TIMESTAMP NOT NULL
+);
+
+CREATE TABLE DishOrder (
+    id SERIAL PRIMARY KEY,
+    id_order INTEGER NOT NULL REFERENCES "Order"(id) ON DELETE CASCADE,
+    id_dish INTEGER NOT NULL REFERENCES Dish(id),
+    quantity INTEGER NOT NULL,
+    UNIQUE (id_order, id_dish)
+);

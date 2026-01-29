@@ -1,3 +1,16 @@
-jdbc/td2/Main.class
 jdbc/td2/model/DishTypeEnum.class
+jdbc/td2/model/Order.class
+jdbc/td2/model/StockMovement.class
+jdbc/td2/model/DishIngredient.class
+jdbc/td2/model/Ingredient.class
+jdbc/td2/model/CategoryEnum.class
+jdbc/td2/model/TableOrder.class
+jdbc/td2/dao/DataRetriever.class
+jdbc/td2/model/DishOrder.class
+jdbc/td2/model/Table.class
+jdbc/td2/Main.class
+jdbc/td2/model/Dish.class
+jdbc/td2/model/UnitConversionService.class
 jdbc/td2/dao/DBConnection.class
+jdbc/td2/model/UnitEnum.class
+jdbc/td2/ConnectionTest.class
