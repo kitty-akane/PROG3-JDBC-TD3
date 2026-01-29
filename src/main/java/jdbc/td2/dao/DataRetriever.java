@@ -92,15 +92,16 @@ public class DataRetriever {
 
         return result;
     }
-
-    // =========================
-    // SAVE DISH
+// =========================
+    // SAVE DISH (ALL-IN-ONE METHOD)
+    // Handles: save dish, add ingredients, update ingredients, remove ingredients
     // =========================
     public Dish saveDish(Dish dish) {
         try (Connection con = DBConnection.getConnection()) {
             con.setAutoCommit(false);
-
-            String sql = """
+            
+            // STEP 1: Save or update the DISH itself
+            String dishSql = """
                 INSERT INTO Dish (id, name, dish_type, selling_price)
                 VALUES (?, ?, ?::dish_type_enum, ?)
                 ON CONFLICT (id) DO UPDATE
@@ -109,119 +110,95 @@ public class DataRetriever {
                     selling_price = EXCLUDED.selling_price
                 RETURNING id
             """;
-
-            try (PreparedStatement ps = con.prepareStatement(sql)) {
+            
+            int dishId;
+            try (PreparedStatement ps = con.prepareStatement(dishSql)) {
                 if (dish.getId() != null) {
                     ps.setInt(1, dish.getId());
                 } else {
                     ps.setNull(1, Types.INTEGER);
                 }
-
+                
                 ps.setString(2, dish.getName());
                 ps.setString(3, dish.getDishType().name());
-
+                
                 if (dish.getPrice() != null) {
                     ps.setDouble(4, dish.getPrice());
                 } else {
                     ps.setNull(4, Types.NUMERIC);
                 }
-
+                
                 ResultSet rs = ps.executeQuery();
                 rs.next();
-                int id = rs.getInt(1);
-
-                con.commit();
-
-                return findDishById(id);
+                dishId = rs.getInt(1);
+                dish.setId(dishId);
             }
-
+            
+            // STEP 2: Handle INGREDIENTS (if provided)
+            if (dish.getIngredients() != null) {
+                
+                // ADD or UPDATE ingredients
+                for (DishIngredient di : dish.getIngredients()) {
+                    PreparedStatement addOrUpdatePs = con.prepareStatement("""
+                        INSERT INTO DishIngredient (id_dish, id_ingredient, quantity_required, unit)
+                        VALUES (?, ?, ?, ?::unit_type_enum)
+                        ON CONFLICT (id_dish, id_ingredient)
+                        DO UPDATE SET quantity_required = EXCLUDED.quantity_required,
+                                      unit = EXCLUDED.unit
+                    """);
+                    
+                    addOrUpdatePs.setInt(1, dishId);
+                    addOrUpdatePs.setInt(2, di.getIngredient().getId());
+                    addOrUpdatePs.setDouble(3, di.getQuantity());
+                    addOrUpdatePs.setString(4, di.getUnit().name());
+                    addOrUpdatePs.executeUpdate();
+                }
+                
+                // REMOVE ingredients that are no longer in the dish
+                // Get current ingredient IDs from the dish object
+                List<Integer> currentIngredientIds = dish.getIngredients().stream()
+                    .map(di -> di.getIngredient().getId())
+                    .toList();
+                
+                // Delete any ingredients not in the current list
+                if (!currentIngredientIds.isEmpty()) {
+                    // Build a DELETE statement that excludes the current ingredients
+                    StringBuilder deleteSql = new StringBuilder("""
+                        DELETE FROM DishIngredient 
+                        WHERE id_dish = ? AND id_ingredient NOT IN (
+                    """);
+                    
+                    for (int i = 0; i < currentIngredientIds.size(); i++) {
+                        deleteSql.append("?");
+                        if (i < currentIngredientIds.size() - 1) {
+                            deleteSql.append(", ");
+                        }
+                    }
+                    deleteSql.append(")");
+                    
+                    PreparedStatement deletePs = con.prepareStatement(deleteSql.toString());
+                    deletePs.setInt(1, dishId);
+                    for (int i = 0; i < currentIngredientIds.size(); i++) {
+                        deletePs.setInt(i + 2, currentIngredientIds.get(i));
+                    }
+                    deletePs.executeUpdate();
+                } else {
+                    // If no ingredients provided, delete all ingredients for this dish
+                    PreparedStatement deleteAllPs = con.prepareStatement("""
+                        DELETE FROM DishIngredient WHERE id_dish = ?
+                    """);
+                    deleteAllPs.setInt(1, dishId);
+                    deleteAllPs.executeUpdate();
+                }
+            }
+            
+            con.commit();
+            return findDishById(dishId);
+            
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
-
-    // =========================
-    //  ADD INGREDIENT
-    // =========================
-    public void addIngredientToDish(
-            int dishId,
-            int ingredientId,
-            double quantity,
-            String unit
-    ) {
-        try (Connection con = DBConnection.getConnection()) {
-
-            PreparedStatement ps = con.prepareStatement("""
-                INSERT INTO DishIngredient (id_dish, id_ingredient, quantity_required, unit)
-                VALUES (?, ?, ?, ?::unit_type_enum)
-                ON CONFLICT (id_dish, id_ingredient)
-                DO UPDATE SET quantity_required = EXCLUDED.quantity_required,
-                              unit = EXCLUDED.unit
-            """);
-
-            ps.setInt(1, dishId);
-            ps.setInt(2, ingredientId);
-            ps.setDouble(3, quantity);
-            ps.setString(4, unit);
-
-            ps.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    // =========================
-    // UPDATE QUANTITY
-    // =========================
-    public void updateIngredientQuantity(
-            int dishId,
-            int ingredientId,
-            double quantity
-    ) {
-        try (Connection con = DBConnection.getConnection()) {
-
-            PreparedStatement ps = con.prepareStatement("""
-                UPDATE DishIngredient
-                SET quantity_required = ?
-                WHERE id_dish = ? AND id_ingredient = ?
-            """);
-
-            ps.setDouble(1, quantity);
-            ps.setInt(2, dishId);
-            ps.setInt(3, ingredientId);
-
-            ps.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    // =========================
-    // REMOVE INGREDIENT
-    // =========================
-    public void removeIngredientFromDish(
-            int dishId,
-            int ingredientId
-    ) {
-        try (Connection con = DBConnection.getConnection()) {
-
-            PreparedStatement ps = con.prepareStatement("""
-                DELETE FROM DishIngredient
-                WHERE id_dish = ? AND id_ingredient = ?
-            """);
-
-            ps.setInt(1, dishId);
-            ps.setInt(2, ingredientId);
-
-            ps.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public List<Ingredient> findIngredients(int page, int size) {
         List<Ingredient> list = new ArrayList<>();
 
@@ -348,6 +325,7 @@ public class DataRetriever {
             PreparedStatement ps;
 
             if (ingredient.getId() == null) {
+                // INSERT - Let PostgreSQL auto-generate the ID
                 ps = con.prepareStatement("""
                     INSERT INTO ingredient (name, category, price)
                     VALUES (?, ?::ingredient_category_enum, ?)
@@ -357,6 +335,7 @@ public class DataRetriever {
                 ps.setString(2, ingredient.getCategory().name());
                 ps.setDouble(3, ingredient.getPrice());
             } else {
+                // UPDATE - Use the existing ID
                 ps = con.prepareStatement("""
                     UPDATE ingredient
                     SET name = ?, category = ?::ingredient_category_enum, price = ?
@@ -372,7 +351,8 @@ public class DataRetriever {
             ResultSet rs = ps.executeQuery();
             rs.next();
             ingredient.setId(rs.getInt(1));
-        
+
+            // Insert stock movements (APPEND ONLY)
             if (ingredient.getStockMovementList() != null) {
                 for (StockMovement sm : ingredient.getStockMovementList()) {
                     PreparedStatement smPs = con.prepareStatement("""
@@ -390,7 +370,7 @@ public class DataRetriever {
                         movementType = "IN";
                     } else {
                         movementType = "OUT";
-                        quantity = Math.abs(quantity);  
+                        quantity = Math.abs(quantity);  // Store as positive
                     }
                     
                     smPs.setDouble(2, quantity);
@@ -489,22 +469,32 @@ public class DataRetriever {
     // CHECK STOCK (HELPER METHOD)
     // =========================
     private void checkStock(Order order) {
-        for (DishOrder dOrder : order.getDishOrders()) {
-            Dish dish = findDishById(dOrder.getDish().getId());
+    for (DishOrder dOrder : order.getDishOrders()) {
+        Dish dish = findDishById(dOrder.getDish().getId());
 
-            for (DishIngredient di : dish.getIngredients()) {
-                Ingredient ing = findIngredientById(di.getIngredient().getId());
+        for (DishIngredient di : dish.getIngredients()) {
+            Ingredient ing = findIngredientById(di.getIngredient().getId());
 
-                double needed = di.getQuantity() * dOrder.getQuantity();
-                double available = ing.getStockValueAt(java.time.Instant.now());
+            double needed = di.getQuantity() * dOrder.getQuantity();
 
-                if (available < needed) {
-                    throw new RuntimeException(
-                            "Stock insuffisant pour l'ingrédient: " + ing.getName());
-                }
+            double neededInKg = UnitConversionService.convertToKg(
+                    ing.getName(),
+                    needed,
+                    di.getUnit().name()
+            );
+
+            double availableInKg =
+                    ing.getStockValueAt(java.time.Instant.now());
+
+            if (availableInKg < neededInKg) {
+                throw new RuntimeException(
+                        "Stock insuffisant pour l'ingrédient: " + ing.getName()
+                );
             }
         }
     }
+}
+
 
     // =========================
     // SAVE ORDER (WITH movement_type for stock movements)

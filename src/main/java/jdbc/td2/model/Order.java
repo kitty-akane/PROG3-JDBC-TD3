@@ -9,16 +9,21 @@ public class Order {
     private String reference;
     private Instant creationDatetime;
     private List<DishOrder> dishOrders;
+
     public Double getTotalAmountWithoutVAT() {
         return dishOrders.stream()
-                .mapToDouble(dishOrder ->
-                        dishOrder.getDish().getPrice() * dishOrder.getQuantity()
+                .filter(dishOrder -> dishOrder.getDish().getPrice() != null) // Skip dishes without price
+                .mapToDouble(dishOrder
+                        -> dishOrder.getDish().getPrice() * dishOrder.getQuantity()
                 )
                 .sum();
     }
+
     public Double getTotalAmountWithVAT() {
-        return getTotalAmountWithoutVAT() * 1.2;
+        double vatRate = 0.20; // 20%
+        return getTotalAmountWithoutVAT() * (1 + vatRate);
     }
+
     public Integer getId() {
         return id;
     }

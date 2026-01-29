@@ -23,7 +23,6 @@ public class Ingredient {
             .sum();
 }
 
-
     public Ingredient() {
     }
 
@@ -100,5 +99,9 @@ public class Ingredient {
                 + ", category=" + category
                 + ", price=" + price
                 + '}';
+    }
+
+    public UnitEnum getStockUnit() {
+        return UnitEnum.KG;
     }
 }
